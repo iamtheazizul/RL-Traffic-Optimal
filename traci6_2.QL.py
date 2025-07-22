@@ -40,7 +40,7 @@ GAMMA = 0.9            # Discount factor
 EPSILON = 0.1          # Exploration rate
 ACTIONS = [0, 1]       # Action space (0 = keep phase, 1 = switch phase)
 Q_table = {}           # Q-table dictionary
-MIN_GREEN_STEPS = 100
+MIN_GREEN_STEPS = 50   # Minimum green time (e.g., 5.00s with 0.10s step length)
 
 # Lists to record data for plotting
 episode_history = []
@@ -85,7 +85,10 @@ def apply_action(action, tls_id, current_simulation_step, last_switch_step):
         if current_simulation_step - last_switch_step >= MIN_GREEN_STEPS:
             program = traci.trafficlight.getAllProgramLogics(tls_id)[0]
             num_phases = len(program.phases)
-            next_phase = (get_current_phase(tls_id) + 1) % num_phases
+            current_phase = get_current_phase(tls_id)
+            phase_group = 0 if current_phase in [0, 1, 2] else 1 if current_phase in [3, 4, 5] else -1
+            next_phase_group = 1 - phase_group  # Toggle between 0 and 1
+            next_phase = 3 if next_phase_group == 1 else 0  # Start of next group
             traci.trafficlight.setPhase(tls_id, next_phase)
             return current_simulation_step  # Update last_switch_step
         return last_switch_step  # No phase change, return unchanged
@@ -115,33 +118,48 @@ def get_current_phase(tls_id):
 # Step 7: Episode-based Training Loop
 print("\n=== Starting Episode-based Reinforcement Learning ===")
 for episode in range(TOTAL_EPISODES):
-    # Reset simulation for new episode
     traci.start(Sumo_config)
-    last_switch_step = -MIN_GREEN_STEPS  # Initialize locally for episode
+    last_switch_step = -MIN_GREEN_STEPS
     cumulative_reward = 0.0
     total_queue = 0.0
+    current_simulation_step = 0
     
     print(f"\n=== Episode {episode + 1}/{TOTAL_EPISODES} ===")
-    for step in range(STEPS_PER_EPISODE):
-        current_simulation_step = step
+    while current_simulation_step < STEPS_PER_EPISODE:
         state = get_state()
         action = get_action_from_policy(state)
-        last_switch_step = apply_action(action, "Node2", current_simulation_step, last_switch_step)
-        traci.simulationStep()
-        new_state = get_state()
-        reward = get_reward(new_state)
-        cumulative_reward += reward
-        total_queue += sum(new_state[:-1])
-        update_Q_table(state, action, reward, new_state)
         
-        # Print progress every 100 steps within episode
-        if step % 100 == 0:
-            print(f"Step {step}/{STEPS_PER_EPISODE}, State: {state}, Action: {action}, Reward: {reward:.2f}, Cumulative Reward: {cumulative_reward:.2f}")
+        # Determine current phase group (0-2 or 3-5)
+        current_phase = state[-1]
+        phase_group = 0 if current_phase in [0, 1, 2] else 1 if current_phase in [3, 4, 5] else -1
+        
+        if action == 1 and (current_simulation_step - last_switch_step >= MIN_GREEN_STEPS):
+            next_phase_group = 1 - phase_group  # Toggles between 0 and 1
+            next_phase = 3 if next_phase_group == 1 else 0  # Start of next group
+            traci.trafficlight.setPhase("Node2", next_phase)
+            last_switch_step = current_simulation_step
+        
+        # Step simulation until phase change or max step
+        prev_phase = current_phase
+        traci.simulationStep()
+        current_simulation_step += 1
+        new_state = get_state()
+        new_phase = new_state[-1]
+        
+        # Update only when phase changes or at the end of a step
+        if new_phase != prev_phase or current_simulation_step >= STEPS_PER_EPISODE:
+            reward = get_reward(new_state)
+            cumulative_reward += reward
+            total_queue += sum(new_state[:-1])
+            update_Q_table(state, action, reward, new_state)
+            
+            if current_simulation_step % 100 == 0:
+                print(f"Step {current_simulation_step}/{STEPS_PER_EPISODE}, State: {state}, Action: {action}, Reward: {reward:.2f}, Cumulative Reward: {cumulative_reward:.2f}")
     
     # Record episode statistics
     episode_history.append(episode)
     reward_history.append(cumulative_reward)
-    queue_history.append(total_queue / STEPS_PER_EPISODE)  # Average queue length per step
+    queue_history.append(total_queue / current_simulation_step)
     print(f"Episode {episode + 1} Summary: Cumulative Reward: {cumulative_reward:.2f}, Avg Queue Length: {queue_history[-1]:.2f}")
     
     # Print Q-table for the last state of the episode
@@ -149,7 +167,6 @@ for episode in range(TOTAL_EPISODES):
     for st, qvals in list(Q_table.items())[-5:]:  # Print last 5 states for brevity
         print(f"  {st} -> {qvals}")
     
-    # Close simulation for this episode
     traci.close()
 
 # Print final Q-table info
