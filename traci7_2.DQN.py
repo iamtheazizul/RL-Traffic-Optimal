@@ -140,7 +140,7 @@ class SumoEnv(gym.Env):
 
 # Step 5: Custom Callback for Episode Control
 class EpisodeCallback(BaseCallback):
-    def __init__(self, env, total_episodes=100, verbose=0):
+    def __init__(self, env, total_episodes=30, verbose=0):
         super(EpisodeCallback, self).__init__(verbose)
         self.env = env
         self.total_episodes = total_episodes
