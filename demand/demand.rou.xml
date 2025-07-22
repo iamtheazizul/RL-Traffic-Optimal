@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<routes>
+    <vType id="Car" accel="2.7" decel="4.5" sigma="0.5" length="5" maxSpeed="70" vClass ="passenger"/>
+
+    <route id="route_1" color="1,1,0" edges="E0 E2"/>
+    <route id="route_2" color="1,1,0" edges="E1 E2"/>
+
+    <flow id="f" begin="50" end="1000" number="400" route="route_1" type="Car" color="0,1,0" departLane="free"/>
+    <flow id="f2" begin="200" end="1500" number="200" route="route_2" type="Car" color="0,0,1" departLane="free"/>
+
+
+    <!-- <vehicle id="veh_1" type="Car" route="route_1" depart="10" color="1,0,0"/> -->
+
+</routes>
