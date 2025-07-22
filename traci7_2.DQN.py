@@ -1,13 +1,12 @@
 import os
 import sys
-import random
 import numpy as np
 import matplotlib.pyplot as plt
 import gymnasium as gym
 from gymnasium import spaces
 import traci
 from stable_baselines3 import DQN
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import BaseCallback
 
 # Step 2: Establish path to SUMO (SUMO_HOME)
 if 'SUMO_HOME' in os.environ:
@@ -39,6 +38,7 @@ class SumoEnv(gym.Env):
         self.total_queue = 0.0
         self.last_switch_step = -self.min_green_steps
         self.current_simulation_step = 0
+        self.episode_count = 0
 
         # Lists to record data for plotting
         self.episode_history = []
@@ -56,8 +56,9 @@ class SumoEnv(gym.Env):
         self.total_queue = 0.0
         self.last_switch_step = -self.min_green_steps
         self.current_simulation_step = 0
+        self.episode_count += 1
         state = self._get_state()
-        info = {"episode": len(self.episode_history) + 1}
+        info = {"episode": self.episode_count}
         return state, info
 
     def step(self, action):
@@ -76,12 +77,12 @@ class SumoEnv(gym.Env):
 
         info = {}
         if done:
-            avg_queue = self.total_queue / self.step_count
-            self.episode_history.append(len(self.episode_history))
+            avg_queue = self.total_queue / self.step_count if self.step_count > 0 else 0
+            self.episode_history.append(self.episode_count - 1)
             self.reward_history.append(self.cumulative_reward)
             self.queue_history.append(avg_queue)
             info = {
-                "episode": len(self.episode_history),
+                "episode": self.episode_count,
                 "cumulative_reward": self.cumulative_reward,
                 "avg_queue_length": avg_queue
             }
@@ -137,7 +138,22 @@ class SumoEnv(gym.Env):
     def render(self, mode="human"):
         pass  # No rendering for non-GUI SUMO
 
-# Step 5: Episode-based Training Loop with Stable Baselines3
+# Step 5: Custom Callback for Episode Control
+class EpisodeCallback(BaseCallback):
+    def __init__(self, env, total_episodes=100, verbose=0):
+        super(EpisodeCallback, self).__init__(verbose)
+        self.env = env
+        self.total_episodes = total_episodes
+        self.current_episode = 0
+
+    def _on_step(self):
+        if self.env.step_count >= self.env.max_steps:
+            self.current_episode += 1
+            if self.current_episode >= self.total_episodes:
+                return False  # Stop training
+        return True
+
+# Step 6: Episode-based Training Loop with Stable Baselines3
 print("\n=== Starting Episode-based Reinforcement Learning (DQN with Stable Baselines3) ===")
 
 # Initialize environment
@@ -154,36 +170,19 @@ model = DQN(
     learning_rate=0.1,  # ALPHA
     gamma=0.9,          # GAMMA
     exploration_initial_eps=0.1,  # EPSILON
-    exploration_final_eps=0.1,    # Keep constant for consistency
-    exploration_fraction=1.0,     # Apply epsilon for entire training
+    exploration_final_eps=0.1,    # Constant exploration
+    exploration_fraction=1.0,
     verbose=1,
-    learning_starts=0,  # Start learning immediately
-    train_freq=1,       # Train after every step
+    learning_starts=0,
+    train_freq=1,
     batch_size=32,
     target_update_interval=1000
 )
 
-# Define callback for logging
-class CustomEvalCallback(EvalCallback):
-    def __init__(self, env, **kwargs):
-        super().__init__(eval_env=env, **kwargs)
-        self.env = env
-
-    def _on_step(self):
-        super()._on_step()
-        return True
-
-# Train for 100 episodes of 1000 steps each
-eval_callback = CustomEvalCallback(
-    env,
-    eval_freq=1000,  # Evaluate after each episode
-    n_eval_episodes=1,
-    deterministic=False,
-    verbose=1
-)
-
-total_timesteps = 100 * 1000  # 100 episodes * 1000 steps
-model.learn(total_timesteps=total_timesteps, callback=eval_callback)
+# Train for exactly 100 episodes
+TOTAL_EPISODES = 100
+callback = EpisodeCallback(env, total_episodes=TOTAL_EPISODES, verbose=1)
+model.learn(total_timesteps=TOTAL_EPISODES * 1000, callback=callback, progress_bar=True)
 
 # Save the model
 model.save("dqn_sumo")
@@ -191,7 +190,7 @@ model.save("dqn_sumo")
 # Close the environment
 env.close()
 
-# Step 6: Visualization of Results
+# Step 7: Visualization of Results
 plt.figure(figsize=(10, 6))
 plt.plot(env.episode_history, env.reward_history, marker='o', linestyle='-', label="Cumulative Reward")
 plt.xlabel("Episode")
