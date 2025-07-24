@@ -8,8 +8,4 @@
     <flow id="f_0" begin="0.00" from="Node4_5_EB" to="Node1_2_WB" via="-E39 -E38 Node2_3_WB" end="3600.00" vehsPerHour="2500"/>
     <flow id="f_1" begin="0.00" from="Node2_7_SB" to="-E35" via="Node2_5_SB Node4_5_WB" end="3600.00" vehsPerHour="1800"/>
     <flow id="f_2" begin="0.00" from="Node1_2_EB" to="Node4_5_WB" via="E38 E39" end="3600.00" vehsPerHour="1800"/>
-    <flow id="f_3" begin="0.00" from="E35" to="Node2_7_NB" end="3600.00" vehsPerHour="1800"/>
-    <flow id="f_4" begin="0.00" from="Node2_7_SB" to="Node2_7_NB" end="3600.00" vehsPerHour="1800"/>
-    <flow id="f_5" begin="0.00" from="Node2_7_SB" to="Node2_7_NB" via="Node2_5_SB -E39 -E38 Node2_3_WB" end="3600.00" vehsPerHour="1800"/>
-    <flow id="f_6" begin="0.00" from="Node2_7_SB" to="Node1_2_EB" via="Node2_3_EB E39 Node4_5_WB" end="3600.00" vehsPerHour="1800"/>
 </routes>

@@ -2,6 +2,10 @@ import os
 import sys
 import random
 import numpy as np
+import matplotlib
+
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 
 # Step 2: Establish path to SUMO (SUMO_HOME)
@@ -40,7 +44,7 @@ GAMMA = 0.9            # Discount factor
 EPSILON = 0.1          # Exploration rate
 ACTIONS = [0, 1]       # Action space (0 = keep phase, 1 = switch phase)
 Q_table = {}           # Q-table dictionary
-MIN_GREEN_STEPS = 50   # Minimum green time (e.g., 5.00s with 0.10s step length)
+MIN_GREEN_STEPS = 100   # Minimum green time 
 
 # Lists to record data for plotting
 episode_history = []
@@ -183,7 +187,7 @@ plt.ylabel("Cumulative Reward")
 plt.title("RL Training: Cumulative Reward over Episodes")
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig("cumulative_reward_ql.png")
 
 # Plot Average Queue Length over Episodes
 plt.figure(figsize=(10, 6))
@@ -193,4 +197,4 @@ plt.ylabel("Average Queue Length")
 plt.title("RL Training: Average Queue Length over Episodes")
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig("queue_length_ql.png")

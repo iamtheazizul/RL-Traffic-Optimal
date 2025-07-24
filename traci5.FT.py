@@ -3,8 +3,10 @@ import os  # Module provides functions to handle file paths, directories, enviro
 import sys  # Module provides access to Python-specific system parameters and functions
 import random
 import numpy as np
-import matplotlib.pyplot as plt  # Visualization
-
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from datetime import datetime
 
 
 
@@ -254,6 +256,18 @@ for st, actions in Q_table.items():
 # Visualization of Results
 # -------------------------
 
+# Create subfolder for saving plots
+output_dir = "ft"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Generate unique suffix based on current date/time
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+# File paths with timestamp to avoid overwriting
+reward_plot_path = os.path.join(output_dir, f"cumulative_reward_{timestamp}.png")
+queue_plot_path = os.path.join(output_dir, f"queue_length_{timestamp}.png")
+
 # Plot Cumulative Reward over Simulation Steps
 plt.figure(figsize=(10, 6))
 plt.plot(step_history, reward_history, marker='o', linestyle='-', label="Cumulative Reward")
@@ -262,7 +276,7 @@ plt.ylabel("Cumulative Reward")
 plt.title("Fixed Timing: Cumulative Reward over Steps")
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig(reward_plot_path)  # Save figure to file
 
 # Plot Total Queue Length over Simulation Steps
 plt.figure(figsize=(10, 6))
@@ -272,4 +286,6 @@ plt.ylabel("Total Queue Length")
 plt.title("Fixed Timing: Queue Length over Steps")
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig(queue_plot_path)  # Save figure to file
+
+print(f"Plots saved to: {reward_plot_path} and {queue_plot_path}")
