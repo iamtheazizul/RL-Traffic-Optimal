@@ -1,6 +1,10 @@
 import os
 import sys
 import numpy as np
+import matplotlib
+
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import gymnasium as gym
 from gymnasium import spaces
@@ -180,7 +184,7 @@ model = DQN(
 )
 
 # Train for exactly 100 episodes
-TOTAL_EPISODES = 100
+TOTAL_EPISODES = 50
 callback = EpisodeCallback(env, total_episodes=TOTAL_EPISODES, verbose=1)
 model.learn(total_timesteps=TOTAL_EPISODES * 1000, callback=callback, progress_bar=True)
 
@@ -198,7 +202,7 @@ plt.ylabel("Cumulative Reward")
 plt.title("RL Training (DQN): Cumulative Reward over Episodes")
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig("cumulative_reward_DQN.png")
 
 plt.figure(figsize=(10, 6))
 plt.plot(env.episode_history, env.queue_history, marker='o', linestyle='-', label="Average Queue Length")
@@ -207,4 +211,4 @@ plt.ylabel("Average Queue Length")
 plt.title("RL Training (DQN): Average Queue Length over Episodes")
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.savefig("queue_length_DQN.png")
