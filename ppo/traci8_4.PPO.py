@@ -20,17 +20,17 @@ else:
 
 # SUMO configuration
 Sumo_config = [
-    'sumo',
+    'sumo-gui',
     '-c', 'simulation_run_rl.sumocfg',
-    '--step-length', '0.1',
-    '--delay', '1000'
+    '--step-length', '1',
+    '--delay', '10'
 ]
 
 # Hyperparameters
 TOTAL_EPISODES = 100
-STEPS_PER_EPISODE = 1000
-MIN_GREEN_SECONDS = 420
-YELLOW_SECONDS = 30
+STEPS_PER_EPISODE = 1500
+MIN_GREEN_SECONDS = 10
+YELLOW_SECONDS = 3
 
 
 class SumoEnv(gym.Env):
@@ -44,8 +44,9 @@ class SumoEnv(gym.Env):
         )
         self.tls_id = "Node2"
         # Convert seconds to simulation steps
-        self.min_green_steps = int(MIN_GREEN_SECONDS / 0.1)  # 420 steps
-        self.yellow_duration = int(YELLOW_SECONDS / 0.1)    # 30 steps
+        self.min_green_steps = int(MIN_GREEN_SECONDS)  # 420 steps
+        self.yellow_duration = int(YELLOW_SECONDS)    # 30 steps
+        self.last_switch_step = -self.min_green_steps
 
         self.phase_start_step = 0
         self.current_phase = 0
@@ -83,6 +84,7 @@ class SumoEnv(gym.Env):
                 raise e
 
         self.current_simulation_step = 0
+        self.last_switch_step = -self.min_green_steps
         self.phase_start_step = 0
         self.current_phase = 0
         traci.trafficlight.setPhase(self.tls_id, 0)  # start with phase 0 green
@@ -150,33 +152,53 @@ class SumoEnv(gym.Env):
         total_queue = sum(state[:-1])
         return -float(total_queue)
 
+    # def _apply_action(self, action):
+    #     if not self.valid_ids:
+    #         return
+
+    #     steps_in_phase = self.current_simulation_step - self.phase_start_step
+    #     current_phase = self._get_current_phase(self.tls_id)
+
+    #     # Logic: must respect green and yellow durations, switch only when allowed
+    #     if current_phase in [0, 2]:  # green phases
+    #         if action == 1 and steps_in_phase >= self.min_green_steps:
+    #             # switch to yellow after green
+    #             next_yellow = 1 if current_phase == 0 else 3
+    #             traci.trafficlight.setPhase(self.tls_id, next_yellow)
+    #             self.phase_start_step = self.current_simulation_step
+    #             self.current_phase = next_yellow
+    #     elif current_phase in [1, 3]:  # yellow phases
+    #         if steps_in_phase >= self.yellow_duration:
+    #             # switch to opposite green after yellow
+    #             next_green = 2 if current_phase == 1 else 0
+    #             traci.trafficlight.setPhase(self.tls_id, next_green)
+    #             self.phase_start_step = self.current_simulation_step
+    #             self.current_phase = next_green
+    #     else:
+    #         # fallback safety
+    #         traci.trafficlight.setPhase(self.tls_id, 0)
+    #         self.phase_start_step = self.current_simulation_step
+    #         self.current_phase = 0
+
     def _apply_action(self, action):
+        # logger.debug(f"Applying action: {action}")
         if not self.valid_ids:
             return
-
-        steps_in_phase = self.current_simulation_step - self.phase_start_step
-        current_phase = self._get_current_phase(self.tls_id)
-
-        # Logic: must respect green and yellow durations, switch only when allowed
-        if current_phase in [0, 2]:  # green phases
-            if action == 1 and steps_in_phase >= self.min_green_steps:
-                # switch to yellow after green
-                next_yellow = 1 if current_phase == 0 else 3
-                traci.trafficlight.setPhase(self.tls_id, next_yellow)
-                self.phase_start_step = self.current_simulation_step
-                self.current_phase = next_yellow
-        elif current_phase in [1, 3]:  # yellow phases
-            if steps_in_phase >= self.yellow_duration:
-                # switch to opposite green after yellow
-                next_green = 2 if current_phase == 1 else 0
-                traci.trafficlight.setPhase(self.tls_id, next_green)
-                self.phase_start_step = self.current_simulation_step
-                self.current_phase = next_green
-        else:
-            # fallback safety
-            traci.trafficlight.setPhase(self.tls_id, 0)
-            self.phase_start_step = self.current_simulation_step
-            self.current_phase = 0
+        if action == 0:
+            return
+        elif action == 1:
+            if self.current_simulation_step - self.last_switch_step >= self.min_green_steps:
+                try:
+                    program = traci.trafficlight.getAllProgramLogics(self.tls_id)[0]
+                    num_phases = len(program.phases)
+                    if num_phases == 0:
+                        return
+                    next_phase = (self._get_current_phase(self.tls_id) + 1) % num_phases
+                    traci.trafficlight.setPhase(self.tls_id, next_phase)
+                    self.last_switch_step = self.current_simulation_step
+                    # logger.debug(f"Switched to phase {next_phase}")
+                except traci.exceptions.TraCIException as e:
+                    return
 
     def _get_queue_length(self, detector_id):
         try:
@@ -205,7 +227,7 @@ def main():
         "MlpPolicy",
         env,
         learning_rate=0.001,
-        n_steps=STEPS_PER_EPISODE,
+        n_steps=2048,
         batch_size=64,
         n_epochs=10,
         gamma=0.95,

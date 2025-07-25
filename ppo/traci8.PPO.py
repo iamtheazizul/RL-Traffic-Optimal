@@ -24,7 +24,7 @@ else:
 
 # Step 4: Define Sumo configuration
 Sumo_config = [
-    'sumo',  # Switch to 'sumo' for training if GUI issues persist
+    'sumo-gui',  # Switch to 'sumo' for training if GUI issues persist
     '-c', 'simulation_run_rl.sumocfg',
     '--step-length', '1.0',
     '--delay', '10'

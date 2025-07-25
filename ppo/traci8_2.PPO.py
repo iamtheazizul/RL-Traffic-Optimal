@@ -19,7 +19,7 @@ else:
 
 # SUMO configuration
 Sumo_config = [
-    'sumo',
+    'sumo-gui',
     '-c', 'simulation_run_rl.sumocfg',
     '--step-length', '0.1',
     '--delay', '1000'

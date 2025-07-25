@@ -20,7 +20,7 @@ from datetime import datetime
 
 # SUMO configuration
 Sumo_config = [
-    'sumo-gui',
+    'sumo',
     '-c', 'simulation_run_rl.sumocfg',
     '--step-length', '0.10',
     '--delay', '1000',
@@ -124,7 +124,7 @@ def main():
         episode_history.append(ep+1)
 
     # Save plots in a 'plots' folder with timestamps:
-    output_dir = "plots"
+    output_dir = "ft"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

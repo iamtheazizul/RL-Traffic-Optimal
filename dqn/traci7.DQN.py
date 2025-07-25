@@ -22,7 +22,7 @@ import traci  # Static network information (such as reading and analyzing networ
 
 # Step 4: Define Sumo configuration
 Sumo_config = [
-    'sumo',
+    'sumo-gui',
     '-c', 'simulation_run_rl.sumocfg',
     '--step-length', '0.10',
     '--delay', '1000',

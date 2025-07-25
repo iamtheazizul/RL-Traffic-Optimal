@@ -43,6 +43,7 @@ class SumoEnv(gym.Env):
         self.last_switch_step = -self.min_green_steps
         self.current_simulation_step = 0
         self.episode_count = 0
+        self.last_switch_step = -self.min_green_steps  # So first switch can happen immediately
 
         # Lists to record data for plotting
         self.episode_history = []
@@ -113,16 +114,36 @@ class SumoEnv(gym.Env):
 
         return np.array([q_EB_0, q_EB_1, q_EB_2, q_SB_0, q_SB_1, q_SB_2, current_phase], dtype=np.float32)
 
+    # def _apply_action(self, action, tls_id="Node2"):
+    #     if action == 0:
+    #         return
+    #     elif action == 1:
+    #         if self.current_simulation_step - self.last_switch_step >= self.min_green_steps:
+    #             current_phase = self._get_current_phase(tls_id)
+    #             # Switch between phase 0 and phase 2 only
+    #             next_phase = 2 if current_phase == 0 else 0
+    #             traci.trafficlight.setPhase(tls_id, next_phase)
+    #             self.last_switch_step = self.current_simulation_step
+
+
     def _apply_action(self, action, tls_id="Node2"):
         if action == 0:
             return
         elif action == 1:
             if self.current_simulation_step - self.last_switch_step >= self.min_green_steps:
                 current_phase = self._get_current_phase(tls_id)
-                # Switch between phase 0 and phase 2 only
-                next_phase = 2 if current_phase == 0 else 0
-                traci.trafficlight.setPhase(tls_id, next_phase)
-                self.last_switch_step = self.current_simulation_step
+                try:
+                    program = traci.trafficlight.getAllProgramLogics(tls_id)[0]
+                    num_phases = len(program.phases)
+                    if num_phases == 0:
+                        return
+                    # Increment phase by 1 modulo total phases
+                    next_phase = (current_phase + 1) % num_phases
+                    traci.trafficlight.setPhase(tls_id, next_phase)
+                    self.last_switch_step = self.current_simulation_step
+                except traci.exceptions.TraCIException:
+                    # Handle possible SUMO connection issues gracefully
+                    pass
 
     def _get_reward(self, state):
         total_queue = sum(state[:-1])  # Exclude current_phase
