@@ -7,7 +7,7 @@
 
     <input>
         <net-file value="network/network_rl.net.xml"/>
-        <route-files value="simulation_run_rl.rou.xml"/>
+        <route-files value="demand/simulation_run_rl.rou.xml"/>
         <additional-files value="simulation_run_rl.add.xml"/>
     </input>
 

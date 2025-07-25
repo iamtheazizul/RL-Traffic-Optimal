@@ -1,0 +1,3 @@
+DQN:
+1. With action groups switching
+2. Changed step length to 1
